@@ -49,7 +49,42 @@ test('it updates transformation matrix on wheel event', t => {
     t.ok(content.style.transform, 'transform applied');
     t.end();
   }, 40);
-})
+});
+
+test('it updates transformation matrix on mousedown event', t => {
+  var dom = new JSDOM(`<body><div class='content'></div></body>`);
+  const document = dom.window.document;
+  var content = document.querySelector('.content');
+
+  // JSDOM does not support this, have to override:
+  content.parentElement.getBoundingClientRect = makeBoundingRect(100, 100);
+
+  var panzoom = createPanzoom(content);
+  var counter = {};
+  panzoom.on('pan', countEvent(counter, 'pan'));
+  panzoom.on('transform', countEvent(counter, 'transform'));
+  panzoom.on('zoom', countEvent(counter, 'zoom'));
+
+  var mouseDownEvent = new dom.window.MouseEvent('mousedown', {bubbles: true});
+  // document.body.dispatchEvent(mouseDownEvent);
+  content.dispatchEvent(mouseDownEvent);
+  var mouseMoveEvent = new dom.window.MouseEvent('mousemove', {movementY: 1, bubbles: true});
+  // document.body.dispatchEvent(mouseMoveEvent);
+  content.dispatchEvent(mouseMoveEvent);
+  var mouseUpEvent = new dom.window.MouseEvent('mouseup', {bubbles: true});
+  // document.body.dispatchEvent(mouseUpEvent);
+  content.dispatchEvent(mouseUpEvent);
+  setTimeout(verifyTransformIsChanged, 40);
+  
+  function verifyTransformIsChanged() {
+    t.equals(counter.pan, 1, 'pan called');
+    t.equals(counter.transform, 1, 'transform called');
+    // t.notOk(counter.zoom, 'Zoom should not have been called');
+    t.equals(content.style.transform.toString(), 'matrix(1, 0, 0, 1, 0, 5)', 'mousedown changed the y position');
+    panzoom.dispose();
+    t.end();
+  }
+});
 
 test('it can pause/resume', t => {
   var dom = new JSDOM(`<body><div class='content'></div></body>`);
@@ -87,7 +122,7 @@ test('it can pause/resume', t => {
       t.end();
     }, 40);
   }, 40);
-})
+});
 
 test('it disposes correctly', t => {
   var dom = new JSDOM(`<body><div class='content'></div></body>`);
